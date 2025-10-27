@@ -122,7 +122,16 @@ function setupMutationObserver() {
       }
     }, window.READSMART_TIMEOUTS.MUTATION_OBSERVER);
   } catch (error) {
+    // Properly log DOMException and other error types
     console.error('[ReadSmart] Error setting up mutation observer:', error);
+    if (error) {
+      console.error('[ReadSmart] Error details:', {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code,
+        type: typeof error
+      });
+    }
   }
 }
 
@@ -165,7 +174,16 @@ function detectArticle() {
     showFloatingButton();
 
   } catch (error) {
+    // Properly log DOMException and other error types
     console.error('[ReadSmart] Error detecting article:', error);
+    if (error) {
+      console.error('[ReadSmart] Error details:', {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code,
+        type: typeof error
+      });
+    }
   }
 }
 
@@ -639,13 +657,36 @@ async function generateSummary() {
     }
 
   } catch (error) {
+    // Properly log DOMException and other error types
     console.error('[ReadSmart] Error generating summary:', error);
+    console.error('[ReadSmart] Error details:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      type: typeof error
+    });
+
+    // Extract error message safely
+    let errorMessage = 'Unknown error occurred';
+    if (error) {
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.error) {
+        errorMessage = error.error;
+      } else {
+        errorMessage = String(error);
+      }
+    }
+
+    console.error('[ReadSmart] Processed error message:', errorMessage);
 
     // Check if extension context was invalidated (happens when extension reloads)
-    if (error.message.includes('Extension context invalidated')) {
+    if (errorMessage.includes('Extension context invalidated')) {
       showSummaryError('Extension was updated. Please reload this page to use ReadSmart.');
     } else {
-      showSummaryError(error.message);
+      showSummaryError(errorMessage);
     }
   }
 }
@@ -764,7 +805,31 @@ async function generateSuggestedQuestions() {
     }
 
   } catch (error) {
+    // Properly log DOMException and other error types
     console.error('[ReadSmart] Error generating questions:', error);
+    console.error('[ReadSmart] Error details:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      type: typeof error
+    });
+
+    // Extract error message safely for logging
+    let errorMessage = 'Unknown error occurred';
+    if (error) {
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.error) {
+        errorMessage = error.error;
+      } else {
+        errorMessage = String(error);
+      }
+    }
+
+    console.error('[ReadSmart] Question generation failed:', errorMessage);
+
     // Show default questions on error
     displaySuggestedQuestions(getDefaultQuestions());
   }
@@ -887,14 +952,36 @@ async function sendQuestion() {
     }
 
   } catch (error) {
+    // Properly log DOMException and other error types
     console.error('[ReadSmart] Error answering question:', error);
+    console.error('[ReadSmart] Error details:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      type: typeof error
+    });
+
+    // Extract error message safely
+    let errorMessage = 'Unknown error occurred';
+    if (error) {
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.error) {
+        errorMessage = error.error;
+      } else {
+        errorMessage = String(error);
+      }
+    }
+
     removeQAMessage(thinkingId);
 
     // Check if extension context was invalidated
-    if (error.message.includes('Extension context invalidated')) {
+    if (errorMessage.includes('Extension context invalidated')) {
       addQAMessage('assistant', '❌ Extension was updated. Please reload this page to use ReadSmart.');
     } else {
-      addQAMessage('assistant', '❌ Sorry, I could not answer that question. ' + error.message);
+      addQAMessage('assistant', '❌ Sorry, I could not answer that question. ' + errorMessage);
     }
   }
 }
@@ -1036,22 +1123,44 @@ async function translateArticle() {
     }
 
   } catch (error) {
+    // Properly log DOMException and other error types
     console.error('[ReadSmart] Error translating:', error);
+    console.error('[ReadSmart] Error details:', {
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      type: typeof error
+    });
+
+    // Extract error message safely
+    let errorMessage = 'Unknown error occurred';
+    if (error) {
+      if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.error) {
+        errorMessage = error.error;
+      } else {
+        errorMessage = String(error);
+      }
+    }
+
     const translationText = document.querySelector('.readsmart-translation-text');
     if (translationText) {
       // Check if extension context was invalidated
-      const errorMessage = error.message.includes('Extension context invalidated')
+      const displayMessage = errorMessage.includes('Extension context invalidated')
         ? 'Extension was updated. Please reload this page to use ReadSmart.'
-        : error.message;
+        : errorMessage;
 
-      const hint = error.message.includes('Extension context invalidated')
+      const hint = errorMessage.includes('Extension context invalidated')
         ? ''
         : 'Make sure Translator API is enabled in chrome://flags';
 
       translationText.innerHTML = `
         <div class="readsmart-error">
           <p>❌ Could not translate article</p>
-          <p class="readsmart-error-detail">${escapeHtml(errorMessage)}</p>
+          <p class="readsmart-error-detail">${escapeHtml(displayMessage)}</p>
           ${hint ? `<p class="readsmart-error-hint">${hint}</p>` : ''}
         </div>
       `;

@@ -2,7 +2,7 @@
 // Handles AI initialization, summarization, and Q&A
 
 import { AIManager } from '../lib/ai-manager.js';
-import { CONTENT_LIMITS, TIMEOUTS, STATS } from '../lib/config-module.js';
+import { CONTENT_LIMITS, TIMEOUTS, STATS, DEBUG } from '../lib/config-module.js';
 
 let aiManager = null;
 let stats = {
@@ -15,7 +15,7 @@ let stats = {
 
 // Initialize on extension install/update
 chrome.runtime.onInstalled.addListener(async (details) => {
-  console.log('[ReadSmart] Extension installed/updated');
+  if (DEBUG.logInfo) console.log('[ReadSmart] Extension installed/updated');
 
   // Load existing stats
   const stored = await chrome.storage.local.get(['stats']);
@@ -42,7 +42,7 @@ async function initializeAI() {
   if (!aiManager) {
     aiManager = new AIManager();
     await aiManager.initialize();
-    console.log('[ReadSmart] AI Manager ready');
+    if (DEBUG.logInfo) console.log('[ReadSmart] AI Manager ready');
   }
   return aiManager;
 }
@@ -98,7 +98,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       });
     }
   } catch (error) {
-    console.error('[ReadSmart] Context menu error:', error);
+    // Properly log DOMException and other error types
+    console.error('[ReadSmart] Context menu error:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     // Show error notification to user
     chrome.notifications.create({
       type: 'basic',
@@ -125,7 +131,7 @@ async function getPageContent(tabId) {
 
 // Process batch summary in background
 async function processBatchSummary(tabIds) {
-  console.log('[ReadSmart] Processing batch summary for', tabIds.length, 'tabs');
+  if (DEBUG.logInfo) console.log('[ReadSmart] Processing batch summary for', tabIds.length, 'tabs');
 
   // Initialize progress
   const progress = {
@@ -153,7 +159,7 @@ async function processBatchSummary(tabIds) {
       // Get tab info
       const tab = await chrome.tabs.get(tabId);
 
-      console.log('[ReadSmart] Summarizing tab', i + 1, '/', tabIds.length, ':', tab.title);
+      if (DEBUG.enabled) console.log('[ReadSmart] Summarizing tab', i + 1, '/', tabIds.length, ':', tab.title);
 
       // Extract content using platform-specific selectors
       const [result] = await chrome.scripting.executeScript({
@@ -284,7 +290,13 @@ async function processBatchSummary(tabIds) {
       await chrome.storage.local.set({ stats });
 
     } catch (error) {
-      console.error('[ReadSmart] Error summarizing tab:', error);
+      // Properly log DOMException and other error types
+      console.error('[ReadSmart] Error summarizing tab:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
 
       progress.results.push({
         tab: { id: tabId, title: 'Error', url: '', favIconUrl: '' },
@@ -302,7 +314,7 @@ async function processBatchSummary(tabIds) {
   progress.endTime = Date.now();
   await chrome.storage.local.set({ batchProgress: progress });
 
-  console.log('[ReadSmart] Batch summary completed!');
+  if (DEBUG.logInfo) console.log('[ReadSmart] Batch summary completed!');
 }
 
 // Handle messages from content scripts
@@ -311,7 +323,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     try {
       switch (request.action) {
         case 'summarizeContent': {
-          console.log('[ReadSmart] Summarizing content...', {
+          if (DEBUG.enabled) console.log('[ReadSmart] Summarizing content...', {
             length: request.length,
             type: request.type
           });
@@ -330,14 +342,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         case 'answerQuestion': {
-          console.log('[ReadSmart] Answering question:', request.question);
+          if (DEBUG.enabled) console.log('[ReadSmart] Answering question:', request.question);
           const ai = await initializeAI();
 
           try {
             // Ensure prompt session is available and valid
             const session = await ai.ensurePromptSession();
 
-            console.log('[ReadSmart] Prompt session ready');
+            if (DEBUG.enabled) console.log('[ReadSmart] Prompt session ready');
 
             // Use Prompt API to answer question about the content
             const prompt = `Based on this article content, please answer the following question concisely:
@@ -348,7 +360,7 @@ Question: ${request.question}
 
 Answer:`;
 
-            console.log('[ReadSmart] Sending prompt to AI...');
+            if (DEBUG.enabled) console.log('[ReadSmart] Sending prompt to AI...');
 
             // Add timeout to prompt() call
             const timeoutPromise = new Promise((_, reject) => {
@@ -358,7 +370,7 @@ Answer:`;
             const promptPromise = session.prompt(prompt);
             const answer = await Promise.race([promptPromise, timeoutPromise]);
 
-            console.log('[ReadSmart] Received answer from AI');
+            if (DEBUG.enabled) console.log('[ReadSmart] Received answer from AI');
 
             // Update stats
             stats.questionsAnswered++;
@@ -367,7 +379,13 @@ Answer:`;
 
             sendResponse({ success: true, answer });
           } catch (error) {
-            console.error('[ReadSmart] Error in answerQuestion:', error);
+            // Properly log DOMException and other error types
+            console.error('[ReadSmart] Error in answerQuestion:', {
+              name: error.name,
+              message: error.message,
+              code: error.code,
+              stack: error.stack
+            });
             sendResponse({
               success: false,
               error: error.message || 'Failed to get answer from AI'
@@ -377,11 +395,11 @@ Answer:`;
         }
 
         case 'generateQuestions': {
-          console.log('[ReadSmart] Generating suggested questions...');
+          if (DEBUG.enabled) console.log('[ReadSmart] Generating suggested questions...');
 
           // Check if LanguageModel API is available
           if (!('LanguageModel' in self)) {
-            console.warn('[ReadSmart] LanguageModel API not available, using default questions');
+            if (DEBUG.logInfo) console.warn('[ReadSmart] LanguageModel API not available, using default questions');
             sendResponse({
               success: true,
               questions: [
@@ -395,10 +413,10 @@ Answer:`;
           }
 
           const availability = await LanguageModel.availability();
-          console.log('[ReadSmart] LanguageModel availability:', availability);
+          if (DEBUG.enabled) console.log('[ReadSmart] LanguageModel availability:', availability);
 
           if (availability === 'no') {
-            console.warn('[ReadSmart] LanguageModel not available, using default questions');
+            if (DEBUG.logInfo) console.warn('[ReadSmart] LanguageModel not available, using default questions');
             sendResponse({
               success: true,
               questions: [
@@ -413,9 +431,11 @@ Answer:`;
 
           const contentForQuestions = request.content.substring(0, CONTENT_LIMITS.QUESTIONS_GEN);
 
-          console.log('[ReadSmart] Article title:', request.title);
-          console.log('[ReadSmart] Full content length:', request.content.length);
-          console.log('[ReadSmart] Content for questions:', contentForQuestions.substring(0, 300) + '...');
+          if (DEBUG.enabled) {
+            console.log('[ReadSmart] Article title:', request.title);
+            console.log('[ReadSmart] Full content length:', request.content.length);
+            console.log('[ReadSmart] Content for questions:', contentForQuestions.substring(0, 300) + '...');
+          }
 
           let questionSession = null;
           try {
@@ -475,8 +495,10 @@ CRITICAL: DO NOT use generic questions. Ask about specific details mentioned in 
 
 Generate 5 questions now (one per line, no numbering):`;
 
-            console.log('[ReadSmart] Sending questions prompt to AI...');
-            console.log('[ReadSmart] Prompt length:', questionsPrompt.length);
+            if (DEBUG.enabled) {
+              console.log('[ReadSmart] Sending questions prompt to AI...');
+              console.log('[ReadSmart] Prompt length:', questionsPrompt.length);
+            }
 
             // Add timeout to prompt() call
             const timeoutPromise = new Promise((_, reject) => {
@@ -486,9 +508,11 @@ Generate 5 questions now (one per line, no numbering):`;
             const promptPromise = questionSession.prompt(questionsPrompt);
             const questionsText = await Promise.race([promptPromise, timeoutPromise]);
 
-            console.log('[ReadSmart] ===== RAW AI RESPONSE =====');
-            console.log(questionsText);
-            console.log('[ReadSmart] ==========================');
+            if (DEBUG.enabled) {
+              console.log('[ReadSmart] ===== RAW AI RESPONSE =====');
+              console.log(questionsText);
+              console.log('[ReadSmart] ==========================');
+            }
 
             // Parse questions from response
             const questions = questionsText
@@ -509,7 +533,7 @@ Generate 5 questions now (one per line, no numbering):`;
               })
               .slice(0, 5);
 
-            console.log('[ReadSmart] Parsed questions:', questions);
+            if (DEBUG.enabled) console.log('[ReadSmart] Parsed questions:', questions);
 
             // Quality check: Reject if questions look too generic
             const genericPatterns = [
@@ -525,20 +549,22 @@ Generate 5 questions now (one per line, no numbering):`;
               genericPatterns.some(pattern => pattern.test(q))
             ).length;
 
-            console.log('[ReadSmart] Generic question count:', genericCount);
+            if (DEBUG.enabled) console.log('[ReadSmart] Generic question count:', genericCount);
 
             // Cleanup session
             questionSession.destroy();
 
             if (questions.length >= 3 && genericCount < 2) {
-              console.log('[ReadSmart] ✓ Questions passed quality check');
+              if (DEBUG.logInfo) console.log('[ReadSmart] ✓ Questions passed quality check');
               sendResponse({
                 success: true,
                 questions: questions
               });
             } else {
-              console.warn('[ReadSmart] Questions failed quality check or insufficient count');
-              console.warn('[ReadSmart] Using fallback questions');
+              if (DEBUG.enabled) {
+                console.warn('[ReadSmart] Questions failed quality check or insufficient count');
+                console.warn('[ReadSmart] Using fallback questions');
+              }
               sendResponse({
                 success: true,
                 questions: [
@@ -551,15 +577,23 @@ Generate 5 questions now (one per line, no numbering):`;
               });
             }
           } catch (error) {
-            console.error('[ReadSmart] Error generating questions:', error);
-            console.error('[ReadSmart] Error details:', error.message, error.stack);
+            // Properly log DOMException and other error types
+            console.error('[ReadSmart] Error generating questions:', {
+              name: error.name,
+              message: error.message,
+              code: error.code,
+              stack: error.stack
+            });
 
             // Cleanup session if it was created
             if (questionSession) {
               try {
                 questionSession.destroy();
               } catch (cleanupError) {
-                console.error('[ReadSmart] Error cleaning up session:', cleanupError);
+                console.error('[ReadSmart] Error cleaning up session:', {
+                  name: cleanupError.name,
+                  message: cleanupError.message
+                });
               }
             }
 
@@ -594,7 +628,7 @@ Generate 5 questions now (one per line, no numbering):`;
           break;
 
         case 'translateContent': {
-          console.log('[ReadSmart] Translating content to:', request.targetLanguage);
+          if (DEBUG.enabled) console.log('[ReadSmart] Translating content to:', request.targetLanguage);
           const ai = await initializeAI();
 
           if (!ai.apiAvailability.translator) {
@@ -612,10 +646,16 @@ Generate 5 questions now (one per line, no numbering):`;
               request.sourceLanguage
             );
 
-            console.log('[ReadSmart] Translation completed');
+            if (DEBUG.logInfo) console.log('[ReadSmart] Translation completed');
             sendResponse({ success: true, translation });
           } catch (error) {
-            console.error('[ReadSmart] Translation error:', error);
+            // Properly log DOMException and other error types
+            console.error('[ReadSmart] Translation error:', {
+              name: error.name,
+              message: error.message,
+              code: error.code,
+              stack: error.stack
+            });
             sendResponse({
               success: false,
               error: error.message || 'Translation failed'
@@ -638,7 +678,7 @@ Generate 5 questions now (one per line, no numbering):`;
         }
 
         case 'startBatchSummary': {
-          console.log('[ReadSmart] Starting batch summary for', request.tabIds.length, 'tabs');
+          if (DEBUG.logInfo) console.log('[ReadSmart] Starting batch summary for', request.tabIds.length, 'tabs');
 
           // Start the batch process in the background
           processBatchSummary(request.tabIds);
@@ -665,7 +705,13 @@ Generate 5 questions now (one per line, no numbering):`;
           sendResponse({ success: false, error: 'Unknown action' });
       }
     } catch (error) {
-      console.error('[ReadSmart] Error handling message:', error);
+      // Properly log DOMException and other error types
+      console.error('[ReadSmart] Error handling message:', {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       sendResponse({ success: false, error: error.message });
     }
   })();
@@ -678,4 +724,4 @@ setInterval(() => {
   chrome.storage.local.set({ stats });
 }, STATS.saveInterval);
 
-console.log('[ReadSmart] Background service worker initialized');
+if (DEBUG.logInfo) console.log('[ReadSmart] Background service worker initialized');

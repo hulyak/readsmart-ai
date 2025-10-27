@@ -683,9 +683,9 @@ async function generateSuggestedQuestions() {
 
     console.log('[ReadSmart] Generating suggested questions...');
 
-    // Request AI to generate questions with timeout
+    // Request AI to generate questions with timeout (increased to 45s for complex articles)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), 20000);
+      setTimeout(() => reject(new Error('Request timed out')), 45000);
     });
 
     const responsePromise = chrome.runtime.sendMessage({

@@ -7,7 +7,7 @@ import { AIManager } from '../lib/ai-manager.js';
 const CONTENT_LIMITS = {
   SUMMARY: 5000,           // Max characters for summarization
   QA_CONTEXT: 3000,        // Max characters for Q&A context
-  QUESTIONS_GEN: 3500,     // Max characters for generating questions
+  QUESTIONS_GEN: 2500,     // Max characters for generating questions (reduced for faster response)
   MIN_ARTICLE: 500,        // Minimum article length to process
   MIN_BATCH_CONTENT: 100   // Minimum content for batch processing
 };
@@ -496,9 +496,9 @@ Generate 5 questions now (one per line, no numbering):`;
             console.log('[ReadSmart] Sending questions prompt to AI...');
             console.log('[ReadSmart] Prompt length:', questionsPrompt.length);
 
-            // Add timeout to prompt() call
+            // Add timeout to prompt() call (40s for complex articles)
             const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('AI response timed out')), 30000);
+              setTimeout(() => reject(new Error('AI response timed out')), 40000);
             });
 
             const promptPromise = questionSession.prompt(questionsPrompt);

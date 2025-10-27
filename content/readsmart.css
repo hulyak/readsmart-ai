@@ -23,7 +23,7 @@
 .readsmart-sidebar h3,
 .readsmart-sidebar p,
 .readsmart-sidebar span,
-.readsmart-sidebar div,
+.readsmart-sidebar div:not(.readsmart-qa-user),
 .readsmart-sidebar label,
 .readsmart-sidebar li {
   color: #333 !important;
@@ -551,13 +551,28 @@
   color: white !important;
   margin-left: auto;
   border-bottom-right-radius: 4px;
+  font-weight: 500;
+}
+
+/* Force user message text to always be white with highest specificity */
+.readsmart-sidebar .readsmart-qa-messages .readsmart-qa-user {
+  color: white !important;
+}
+
+.readsmart-sidebar .readsmart-qa-messages .readsmart-qa-user * {
+  color: white !important;
 }
 
 .readsmart-qa-assistant {
   background: white !important;
-  color: #333 !important;
+  color: #2c3e50 !important;
   border: 1px solid #e0e0e0;
   border-bottom-left-radius: 4px;
+}
+
+/* Better color for assistant text */
+.readsmart-qa-assistant * {
+  color: #2c3e50 !important;
 }
 
 .readsmart-qa-thinking {

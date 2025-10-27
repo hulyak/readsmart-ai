@@ -640,7 +640,13 @@ async function generateSummary() {
 
   } catch (error) {
     console.error('[ReadSmart] Error generating summary:', error);
-    showSummaryError(error.message);
+
+    // Check if extension context was invalidated (happens when extension reloads)
+    if (error.message.includes('Extension context invalidated')) {
+      showSummaryError('Extension was updated. Please reload this page to use ReadSmart.');
+    } else {
+      showSummaryError(error.message);
+    }
   }
 }
 
@@ -883,7 +889,13 @@ async function sendQuestion() {
   } catch (error) {
     console.error('[ReadSmart] Error answering question:', error);
     removeQAMessage(thinkingId);
-    addQAMessage('assistant', '❌ Sorry, I could not answer that question. ' + error.message);
+
+    // Check if extension context was invalidated
+    if (error.message.includes('Extension context invalidated')) {
+      addQAMessage('assistant', '❌ Extension was updated. Please reload this page to use ReadSmart.');
+    } else {
+      addQAMessage('assistant', '❌ Sorry, I could not answer that question. ' + error.message);
+    }
   }
 }
 
@@ -1027,11 +1039,20 @@ async function translateArticle() {
     console.error('[ReadSmart] Error translating:', error);
     const translationText = document.querySelector('.readsmart-translation-text');
     if (translationText) {
+      // Check if extension context was invalidated
+      const errorMessage = error.message.includes('Extension context invalidated')
+        ? 'Extension was updated. Please reload this page to use ReadSmart.'
+        : error.message;
+
+      const hint = error.message.includes('Extension context invalidated')
+        ? ''
+        : 'Make sure Translator API is enabled in chrome://flags';
+
       translationText.innerHTML = `
         <div class="readsmart-error">
           <p>❌ Could not translate article</p>
-          <p class="readsmart-error-detail">${escapeHtml(error.message)}</p>
-          <p class="readsmart-error-hint">Make sure Translator API is enabled in chrome://flags</p>
+          <p class="readsmart-error-detail">${escapeHtml(errorMessage)}</p>
+          ${hint ? `<p class="readsmart-error-hint">${hint}</p>` : ''}
         </div>
       `;
     }

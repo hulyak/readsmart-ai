@@ -374,14 +374,27 @@
 .readsmart-translate-options select {
   width: auto;
   min-width: 100px;
+  padding: 6px 10px;
+  height: 32px;
 }
 
 .readsmart-translate-options button {
   flex-shrink: 0;
-  padding: 4px 10px !important;
+  padding: 6px 12px !important;
   font-size: 12px !important;
   min-width: auto !important;
   width: auto !important;
+  height: 32px !important;
+  border: 1px solid #ddd !important;
+  transition: all 0.2s !important;
+}
+
+.readsmart-translate-options button:hover {
+  background: #667eea !important;
+  color: white !important;
+  border-color: #667eea !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .readsmart-translation-content {

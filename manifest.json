@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "ReadSmart AI",
   "version": "1.0.0",
-  "description": "Your AI-powered reading assistant. Instantly summarize articles, ask questions about any webpage, and understand content faster using Chrome's built-in Gemini Nano.",
+  "description": "AI reading assistant. Summarize articles, ask questions, and understand content faster using Chrome's built-in Gemini Nano.",
   "trial_tokens": [
     "Akxs9NuFcOxMOIrAWeM5ziWz8oY673AFDkRclyacL7VNLouh/i6MoxDXqjkO0RgqY4J2y3R2vmFT6XS84hSD0wsAAAB7eyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vYWFpY2FmaGNkaXBjYmtwaWltcG5qbWhlZHBnZ3BhZGYiLCJmZWF0dXJlIjoiQUlQcm9tcHRBUElNdWx0aW1vZGFsSW5wdXQiLCJleHBpcnkiOjE3NzQzMTA0MDB9"
   ],

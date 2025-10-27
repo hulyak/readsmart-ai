@@ -85,7 +85,7 @@ See [SUPPORTED_PLATFORMS.md](SUPPORTED_PLATFORMS.md) for full list.
 
 ## Chrome AI APIs Used
 
-This extension strategically integrates **4 Chrome Built-in AI APIs**:
+This extension strategically integrates **3 Chrome Built-in AI APIs**:
 
 ### 1. **Summarizer API**
 **Purpose**: Generate intelligent article summaries
@@ -110,7 +110,7 @@ Saves time by condensing lengthy articles into digestible summaries.
 
 **Key Features**:
 - HTML sanitization to prevent injection attacks
-- 25-second timeout protection for reliable responses
+- 30-second timeout protection for reliable responses
 - Platform-specific content extraction for 30+ sites
 
 ### 2. **Prompt API**
@@ -137,7 +137,7 @@ const answer = await session.prompt(`
 Enables active learning by allowing users to ask questions and explore topics in depth.
 
 **Key Features**:
-- Timeout protection on all AI calls (no hanging)
+- Timeout protection on all AI calls (30s for Q&A, 45s for question generation)
 - Proper session management and cleanup
 - Smart content truncation (3000 chars for Q&A, 5000 for summaries)
 
@@ -183,7 +183,7 @@ Provides access to foreign language content for non-native speakers.
 
 ### File Structure
 ```
-scam-shield-ai/
+readsmart-ai/
 ├── manifest.json              # Extension configuration (Manifest V3)
 ├── background/
 │   └── background.js          # Service worker & batch processing
@@ -293,7 +293,7 @@ scam-shield-ai/
 1. Open any article/blog/news page
 2. Purple button with AI brain icon appears bottom-right
 3. Click button → Sidebar slides in
-4. Summary generates automatically in 3-5 seconds
+4. Summary generates automatically in 20-30 seconds
 5. Ask questions in the Q&A section
 
 **Supported Sites:**
@@ -378,8 +378,8 @@ Track your productivity:
 AI generates context-aware questions based on article content
 
 **Response Time:**
-- 2-4 seconds per question
-- Timeout protection (25 seconds max)
+- 15-30 seconds per question
+- Timeout protection (30 seconds max)
 - Error handling with user-friendly messages
 
 ### 🌐 Translation
@@ -410,7 +410,7 @@ AI generates context-aware questions based on article content
 
 - **HTML Sanitization** - All AI output is escaped to prevent XSS
 - **Content Security** - CSP headers and safe rendering
-- **Timeout Protection** - No infinite waits, 25-second max
+- **Timeout Protection** - No infinite waits (30s for summarization/Q&A, 45s for questions)
 - **Error Boundaries** - Graceful failure handling
 
 ### Permissions Explained
@@ -432,10 +432,10 @@ AI generates context-aware questions based on article content
 
 ### Problem 1: Q&A Hanging Forever
 **Issue**: `ai.promptSession.prompt()` calls hung indefinitely with no response
-**Solution**: Added Promise.race() timeout wrappers (25-30 seconds) to all AI calls
+**Solution**: Added Promise.race() timeout wrappers (30s for Q&A, 45s for question generation) to all AI calls
 ```javascript
 const timeoutPromise = new Promise((_, reject) => {
-  setTimeout(() => reject(new Error('AI response timed out')), 25000);
+  setTimeout(() => reject(new Error('AI response timed out')), TIMEOUTS.QA); // 30 seconds
 });
 const answer = await Promise.race([promptPromise, timeoutPromise]);
 ```

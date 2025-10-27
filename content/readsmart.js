@@ -1,17 +1,14 @@
 // ReadSmart AI - Content Script
 // Intelligently detects articles and provides AI-powered reading assistance
 
-console.log('[ReadSmart] Content script loaded');
+// Safety check: ensure config is loaded from config.js
+if (!window.READSMART_CONTENT_LIMITS || !window.READSMART_TIMEOUTS || !window.READSMART_DETECTION) {
+  console.error('[ReadSmart] Configuration not loaded! Ensure config.js loads before readsmart.js in manifest.json');
+  throw new Error('ReadSmart configuration not loaded');
+}
 
-// Configuration
-const CONFIG = {
-  minArticleLength: 500, // Minimum text length to show ReadSmart button
-  autoDetect: true,
-  showOnLoad: true,
-  buttonDelay: 1000, // Wait 1 second before showing button
-  maxRetries: 5, // Retry detection for dynamic content
-  retryInterval: 1000, // Retry every 1 second
-};
+console.log('[ReadSmart] Content script loaded');
+console.log('[ReadSmart] Config loaded successfully');
 
 let isArticlePage = false;
 let articleContent = null;
@@ -33,7 +30,7 @@ function init() {
   // Initial detection attempt
   setTimeout(() => {
     detectArticle();
-  }, CONFIG.buttonDelay);
+  }, window.READSMART_DETECTION.buttonDelay);
 
   // Set up mutation observer for dynamically loaded content (e.g., Medium, Substack)
   setupMutationObserver();
@@ -47,15 +44,21 @@ function init() {
     }
 
     detectionAttempts++;
-    console.log(`[ReadSmart] Retry detection attempt ${detectionAttempts}/${CONFIG.maxRetries}`);
+    console.log(`[ReadSmart] Retry detection attempt ${detectionAttempts}/${window.READSMART_DETECTION.maxRetries}`);
     detectArticle();
 
-    if (detectionAttempts >= CONFIG.maxRetries) {
+    if (detectionAttempts >= window.READSMART_DETECTION.maxRetries) {
       clearInterval(retryIntervalId);
       retryIntervalId = null;
       console.log('[ReadSmart] Max detection attempts reached, stopping retry');
+      // Disconnect mutation observer to prevent memory leak
+      if (mutationObserver) {
+        mutationObserver.disconnect();
+        mutationObserver = null;
+        console.log('[ReadSmart] Disconnected mutation observer after max retries');
+      }
     }
-  }, CONFIG.retryInterval);
+  }, window.READSMART_DETECTION.retryInterval);
 }
 
 // Cleanup function to prevent memory leaks
@@ -109,6 +112,15 @@ function setupMutationObserver() {
     });
 
     console.log('[ReadSmart] Mutation observer set up successfully');
+
+    // Safety timeout: disconnect observer to prevent memory leak
+    setTimeout(() => {
+      if (mutationObserver && !isArticlePage) {
+        console.log('[ReadSmart] Safety timeout reached, disconnecting mutation observer');
+        mutationObserver.disconnect();
+        mutationObserver = null;
+      }
+    }, window.READSMART_TIMEOUTS.MUTATION_OBSERVER);
   } catch (error) {
     console.error('[ReadSmart] Error setting up mutation observer:', error);
   }
@@ -124,10 +136,10 @@ function detectArticle() {
 
     const content = extractArticleContent();
 
-    if (!content || content.text.length < CONFIG.minArticleLength) {
+    if (!content || content.text.length < window.READSMART_CONTENT_LIMITS.MIN_ARTICLE) {
       console.log('[ReadSmart] Page does not appear to be an article (too short or no content)');
-      console.log('[ReadSmart] Content length:', content ? content.text.length : 0, 'characters (min:', CONFIG.minArticleLength, ')');
-      if (content && content.text.length > 0 && content.text.length < CONFIG.minArticleLength) {
+      console.log('[ReadSmart] Content length:', content ? content.text.length : 0, 'characters (min:', window.READSMART_CONTENT_LIMITS.MIN_ARTICLE, ')');
+      if (content && content.text.length > 0 && content.text.length < window.READSMART_CONTENT_LIMITS.MIN_ARTICLE) {
         console.log('[ReadSmart] First 200 chars of extracted content:', content.text.substring(0, 200));
       }
       return;
@@ -538,28 +550,50 @@ function createSidebar() {
     </div>
   `;
 
-  // Add event listeners
-  setTimeout(() => {
+  // Add event listeners immediately (no setTimeout to prevent accumulation issues)
+  // Use event delegation on sidebar for better performance and cleanup
+  sidebar.addEventListener('click', (e) => {
+    const target = e.target;
+
     // Close button
-    document.getElementById('readsmart-close').addEventListener('click', closeSidebar);
+    if (target.id === 'readsmart-close' || target.closest('#readsmart-close')) {
+      closeSidebar();
+    }
+    // Regenerate summary button
+    else if (target.id === 'readsmart-regenerate-summary' || target.closest('#readsmart-regenerate-summary')) {
+      regenerateSummary();
+    }
+    // Q&A send button
+    else if (target.id === 'readsmart-qa-send' || target.closest('#readsmart-qa-send')) {
+      sendQuestion();
+    }
+    // Translation button
+    else if (target.id === 'readsmart-translate-btn' || target.closest('#readsmart-translate-btn')) {
+      translateArticle();
+    }
+    // Show original button
+    else if (target.id === 'readsmart-show-original' || target.closest('#readsmart-show-original')) {
+      showOriginalArticle();
+    }
+  });
 
-    // Summary options
-    document.getElementById('readsmart-summary-length').addEventListener('change', regenerateSummary);
-    document.getElementById('readsmart-summary-type').addEventListener('change', regenerateSummary);
-    document.getElementById('readsmart-regenerate-summary')?.addEventListener('click', regenerateSummary);
+  // Add change event listeners for selects
+  sidebar.addEventListener('change', (e) => {
+    const target = e.target;
+    if (target.id === 'readsmart-summary-length' || target.id === 'readsmart-summary-type') {
+      regenerateSummary();
+    }
+  });
 
-    // Q&A
-    document.getElementById('readsmart-qa-send').addEventListener('click', sendQuestion);
-    document.getElementById('readsmart-qa-input').addEventListener('keypress', (e) => {
+  // Add keypress listener for Q&A input
+  const qaInput = sidebar.querySelector('#readsmart-qa-input');
+  if (qaInput) {
+    qaInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         sendQuestion();
       }
     });
-
-    // Translation
-    document.getElementById('readsmart-translate-btn')?.addEventListener('click', translateArticle);
-    document.getElementById('readsmart-show-original')?.addEventListener('click', showOriginalArticle);
-  }, 100);
+  }
 
   return sidebar;
 }
@@ -647,11 +681,25 @@ function showSummaryError(message) {
   const summaryContent = document.getElementById('readsmart-summary-content');
   if (!summaryContent) return;
 
+  // Check if it's a model crash error
+  const isModelCrash = message.includes('crashed') || message.includes('blocked');
+
+  let hint = 'Make sure Chrome AI APIs are enabled in chrome://flags';
+  if (isModelCrash) {
+    hint = `<strong>Quick Fix:</strong><br>
+    1. Press Cmd+Q to quit Chrome completely<br>
+    2. Reopen Chrome<br>
+    3. Visit chrome://components/<br>
+    4. Find "Optimization Guide On Device Model"<br>
+    5. Click "Check for update"<br>
+    6. Restart Chrome again`;
+  }
+
   summaryContent.innerHTML = `
     <div class="readsmart-error">
       <p>❌ Could not generate summary</p>
       <p class="readsmart-error-detail">${escapeHtml(message)}</p>
-      <p class="readsmart-error-hint">Make sure Chrome AI APIs are enabled in chrome://flags</p>
+      <p class="readsmart-error-hint">${hint}</p>
     </div>
   `;
 
@@ -664,6 +712,10 @@ function showSummaryError(message) {
 
 // Regenerate summary
 function regenerateSummary() {
+  console.log('[ReadSmart] Regenerating summary with new settings...');
+  const length = document.getElementById('readsmart-summary-length')?.value;
+  const type = document.getElementById('readsmart-summary-type')?.value;
+  console.log('[ReadSmart] New settings:', { length, type });
   generateSummary();
 }
 
@@ -683,9 +735,9 @@ async function generateSuggestedQuestions() {
 
     console.log('[ReadSmart] Generating suggested questions...');
 
-    // Request AI to generate questions with timeout (increased to 45s for complex articles)
+    // Request AI to generate questions with timeout
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), 45000);
+      setTimeout(() => reject(new Error('Request timed out')), window.READSMART_TIMEOUTS.QUESTIONS_GEN);
     });
 
     const responsePromise = chrome.runtime.sendMessage({
@@ -802,7 +854,7 @@ async function sendQuestion() {
 
     // Request answer from background script with timeout
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000);
+      setTimeout(() => reject(new Error('Request timed out')), window.READSMART_TIMEOUTS.QA);
     });
 
     const responsePromise = chrome.runtime.sendMessage({
@@ -883,6 +935,38 @@ function removeQAMessage(messageId) {
   }
 }
 
+// Detect source language from page
+function detectSourceLanguage() {
+  // Try to get language from HTML lang attribute
+  const htmlLang = document.documentElement.lang;
+  if (htmlLang && htmlLang.length >= 2) {
+    const langCode = htmlLang.substring(0, 2).toLowerCase();
+    console.log('[ReadSmart] Detected language from HTML:', langCode);
+    return langCode;
+  }
+
+  // Try to get from meta tags
+  const metaLang = document.querySelector('meta[http-equiv="content-language"]')?.content ||
+                   document.querySelector('meta[name="language"]')?.content;
+  if (metaLang && metaLang.length >= 2) {
+    const langCode = metaLang.substring(0, 2).toLowerCase();
+    console.log('[ReadSmart] Detected language from meta:', langCode);
+    return langCode;
+  }
+
+  // Fall back to browser language
+  const browserLang = navigator.language || navigator.userLanguage;
+  if (browserLang && browserLang.length >= 2) {
+    const langCode = browserLang.substring(0, 2).toLowerCase();
+    console.log('[ReadSmart] Using browser language:', langCode);
+    return langCode;
+  }
+
+  // Default to English
+  console.log('[ReadSmart] No language detected, defaulting to English');
+  return 'en';
+}
+
 // Translate article
 async function translateArticle() {
   try {
@@ -892,24 +976,38 @@ async function translateArticle() {
 
     if (!translationContent || !translationText) return;
 
+    // Detect source language
+    const sourceLang = detectSourceLanguage();
+
+    // Check if source and target are the same
+    if (sourceLang === targetLang) {
+      translationContent.style.display = 'block';
+      translationText.innerHTML = `
+        <div class="readsmart-error">
+          <p>⚠️ Source and target languages are the same</p>
+          <p class="readsmart-error-detail">This article is already in ${getLanguageName(targetLang)}</p>
+        </div>
+      `;
+      return;
+    }
+
     // Show loading
     translationContent.style.display = 'block';
     translationText.innerHTML = `
       <div class="readsmart-loading">
         <div class="readsmart-spinner"></div>
-        <p>Translating to ${getLanguageName(targetLang)}...</p>
+        <p>Translating ${getLanguageName(sourceLang)} to ${getLanguageName(targetLang)}...</p>
       </div>
     `;
 
-    console.log('[ReadSmart] Translating to:', targetLang);
+    console.log('[ReadSmart] Translating from', sourceLang, 'to:', targetLang);
 
-    // Request translation from background script
-    // Always translate from English
+    // Request translation from background script with detected source language
     const response = await chrome.runtime.sendMessage({
       action: 'translateContent',
       content: articleContent.text,
       targetLanguage: targetLang,
-      sourceLanguage: 'en'
+      sourceLanguage: sourceLang
     });
 
     console.log('[ReadSmart] Translation response:', response);
@@ -962,9 +1060,49 @@ function getLanguageName(code) {
     'zh': 'Chinese',
     'ko': 'Korean',
     'ar': 'Arabic',
-    'hi': 'Hindi'
+    'hi': 'Hindi',
+    'tr': 'Turkish',
+    'nl': 'Dutch',
+    'pl': 'Polish',
+    'sv': 'Swedish',
+    'no': 'Norwegian',
+    'da': 'Danish',
+    'fi': 'Finnish',
+    'el': 'Greek',
+    'cs': 'Czech',
+    'ro': 'Romanian',
+    'hu': 'Hungarian',
+    'th': 'Thai',
+    'vi': 'Vietnamese',
+    'id': 'Indonesian',
+    'ms': 'Malay',
+    'uk': 'Ukrainian',
+    'bg': 'Bulgarian',
+    'hr': 'Croatian',
+    'sr': 'Serbian',
+    'sk': 'Slovak',
+    'sl': 'Slovenian',
+    'he': 'Hebrew',
+    'fa': 'Persian',
+    'ur': 'Urdu',
+    'bn': 'Bengali',
+    'ta': 'Tamil',
+    'te': 'Telugu',
+    'mr': 'Marathi',
+    'gu': 'Gujarati',
+    'kn': 'Kannada',
+    'ml': 'Malayalam',
+    'si': 'Sinhala',
+    'my': 'Burmese',
+    'km': 'Khmer',
+    'lo': 'Lao',
+    'ka': 'Georgian',
+    'am': 'Amharic',
+    'sw': 'Swahili',
+    'zu': 'Zulu',
+    'af': 'Afrikaans'
   };
-  return languages[code] || code;
+  return languages[code] || code.toUpperCase();
 }
 
 // Escape HTML to prevent XSS/rendering issues

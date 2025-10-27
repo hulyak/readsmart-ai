@@ -2,15 +2,7 @@
 // Handles AI initialization, summarization, and Q&A
 
 import { AIManager } from '../lib/ai-manager.js';
-
-// Content length limits for AI processing
-const CONTENT_LIMITS = {
-  SUMMARY: 5000,           // Max characters for summarization
-  QA_CONTEXT: 3000,        // Max characters for Q&A context
-  QUESTIONS_GEN: 2500,     // Max characters for generating questions (reduced for faster response)
-  MIN_ARTICLE: 500,        // Minimum article length to process
-  MIN_BATCH_CONTENT: 100   // Minimum content for batch processing
-};
+import { CONTENT_LIMITS, TIMEOUTS, STATS } from '../lib/config-module.js';
 
 let aiManager = null;
 let stats = {
@@ -88,12 +80,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     } else if (info.menuItemId === 'readsmart-explain') {
       const ai = await initializeAI();
 
+      // Ensure session is available
+      const session = await ai.ensurePromptSession();
+
       // Add timeout protection
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Explanation timed out after 25 seconds')), 25000);
+        setTimeout(() => reject(new Error('Explanation timed out')), TIMEOUTS.CONTEXT_MENU);
       });
 
-      const promptPromise = ai.promptSession?.prompt(`Explain this simply: ${info.selectionText}`);
+      const promptPromise = session.prompt(`Explain this simply: ${info.selectionText}`);
       const explanation = await Promise.race([promptPromise, timeoutPromise]);
 
       // Send to content script to display
@@ -284,7 +279,7 @@ async function processBatchSummary(tabIds) {
       // Update stats
       stats.summariesGenerated++;
       stats.articlesRead++;
-      stats.timeSaved += 4;
+      stats.timeSaved += STATS.timeSavedPerSummary;
       stats.lastUpdated = Date.now();
       await chrome.storage.local.set({ stats });
 
@@ -326,8 +321,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           // Update stats
           stats.summariesGenerated++;
           stats.articlesRead++;
-          // Estimate time saved (average article = 5 min read, summary saves ~4 min)
-          stats.timeSaved += 4;
+          stats.timeSaved += STATS.timeSavedPerSummary;
           stats.lastUpdated = Date.now();
           await chrome.storage.local.set({ stats });
 
@@ -339,24 +333,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           console.log('[ReadSmart] Answering question:', request.question);
           const ai = await initializeAI();
 
-          // Debug: Check if Prompt API is available
-          console.log('[ReadSmart] Prompt Session Status:', {
-            promptSessionExists: !!ai.promptSession,
-            languageModelAvailable: ai.apiAvailability?.languageModel
-          });
-
-          // Check if Prompt API is available
-          if (!ai.promptSession) {
-            console.error('[ReadSmart] Prompt API session not available!');
-            console.error('[ReadSmart] Please enable chrome://flags/#prompt-api-for-gemini-nano');
-            sendResponse({
-              success: false,
-              error: 'Prompt API not available. Please enable chrome://flags/#prompt-api-for-gemini-nano and restart Chrome.'
-            });
-            break;
-          }
-
           try {
+            // Ensure prompt session is available and valid
+            const session = await ai.ensurePromptSession();
+
+            console.log('[ReadSmart] Prompt session ready');
+
             // Use Prompt API to answer question about the content
             const prompt = `Based on this article content, please answer the following question concisely:
 
@@ -370,10 +352,10 @@ Answer:`;
 
             // Add timeout to prompt() call
             const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('AI response timed out after 25 seconds')), 25000);
+              setTimeout(() => reject(new Error('AI response timed out')), TIMEOUTS.QA);
             });
 
-            const promptPromise = ai.promptSession.prompt(prompt);
+            const promptPromise = session.prompt(prompt);
             const answer = await Promise.race([promptPromise, timeoutPromise]);
 
             console.log('[ReadSmart] Received answer from AI');
@@ -496,9 +478,9 @@ Generate 5 questions now (one per line, no numbering):`;
             console.log('[ReadSmart] Sending questions prompt to AI...');
             console.log('[ReadSmart] Prompt length:', questionsPrompt.length);
 
-            // Add timeout to prompt() call (40s for complex articles)
+            // Add timeout to prompt() call
             const timeoutPromise = new Promise((_, reject) => {
-              setTimeout(() => reject(new Error('AI response timed out')), 40000);
+              setTimeout(() => reject(new Error('AI response timed out')), TIMEOUTS.QUESTIONS_GEN);
             });
 
             const promptPromise = questionSession.prompt(questionsPrompt);
@@ -694,6 +676,6 @@ Generate 5 questions now (one per line, no numbering):`;
 // Periodic stats save
 setInterval(() => {
   chrome.storage.local.set({ stats });
-}, 60000); // Save every minute
+}, STATS.saveInterval);
 
 console.log('[ReadSmart] Background service worker initialized');

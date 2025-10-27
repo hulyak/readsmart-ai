@@ -33,6 +33,7 @@
     {
       "matches": ["<all_urls>"],
       "js": [
+        "lib/config.js",
         "content/readsmart.js"
       ],
       "css": ["content/readsmart.css"],

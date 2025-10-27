@@ -38,9 +38,9 @@
   border-color: #e0e0e0 !important;
 }
 
-/* Buttons */
+/* Buttons - default */
 .readsmart-sidebar button {
-  color: inherit !important;
+  color: #333 !important;
 }
 
 /* Floating Button */
@@ -345,7 +345,7 @@
 
 .readsmart-btn-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: white !important;
 }
 
 .readsmart-btn-primary:hover {

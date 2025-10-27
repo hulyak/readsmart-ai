@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "ReadSmart AI",
+  "version": "1.0.0",
+  "description": "Your AI-powered reading assistant. Instantly summarize articles, ask questions about any webpage, and understand content faster using Chrome's built-in Gemini Nano.",
+  "trial_tokens": [
+    "Akxs9NuFcOxMOIrAWeM5ziWz8oY673AFDkRclyacL7VNLouh/i6MoxDXqjkO0RgqY4J2y3R2vmFT6XS84hSD0wsAAAB7eyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vYWFpY2FmaGNkaXBjYmtwaWltcG5qbWhlZHBnZ3BhZGYiLCJmZWF0dXJlIjoiQUlQcm9tcHRBUElNdWx0aW1vZGFsSW5wdXQiLCJleHBpcnkiOjE3NzQzMTA0MDB9"
+  ],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "contextMenus",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "ReadSmart AI - Multi-Tab Summary",
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "service_worker": "background/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "content/readsmart.js"
+      ],
+      "css": ["content/readsmart.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/overlay.html",
+        "icons/*.png",
+        "icons/*.svg"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

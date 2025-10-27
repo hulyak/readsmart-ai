@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadSmart AI - Multi-Tab Summary</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="popup-title">
+        <span class="popup-icon">✨</span>
+        <span>ReadSmart AI</span>
+      </div>
+      <div class="popup-subtitle">Multi-Tab Summary</div>
+    </div>
+
+    <!-- Tab List -->
+    <div class="popup-content">
+      <div class="tabs-section">
+        <div class="section-header">
+          <h3>📑 Select Tabs to Summarize</h3>
+          <button id="select-all-btn" class="btn-text">Select All</button>
+        </div>
+
+        <div id="tabs-loading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading tabs...</p>
+        </div>
+
+        <div id="tabs-list" class="tabs-list" style="display: none;">
+          <!-- Tabs will be dynamically inserted here -->
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions-section">
+        <button id="summarize-btn" class="btn-primary" disabled>
+          <span>📝 Summarize Selected Tabs</span>
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div id="results-section" class="results-section" style="display: none;">
+        <div class="section-header">
+          <h3>✨ Summary Results</h3>
+          <div class="results-actions">
+            <button id="export-btn" class="btn-secondary">Export</button>
+            <button id="clear-btn" class="btn-text">Clear</button>
+          </div>
+        </div>
+        <div id="results-content" class="results-content">
+          <!-- Results will be dynamically inserted here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Stats -->
+    <div class="popup-footer">
+      <div class="stat">
+        <span class="stat-value" id="selected-count">0</span>
+        <span class="stat-label">Selected</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="articles-count">0</span>
+        <span class="stat-label">Articles</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="time-saved">0</span>
+        <span class="stat-label">Min Saved</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

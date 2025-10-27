@@ -113,7 +113,7 @@
 .readsmart-sidebar-header {
   padding: 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  color: white !important;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -126,10 +126,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  color: white !important;
+}
+
+.readsmart-sidebar-title span {
+  color: white !important;
 }
 
 .readsmart-icon {
   font-size: 24px;
+  color: white !important;
 }
 
 .readsmart-close-btn {
@@ -565,6 +571,7 @@
 .readsmart-qa-input-container {
   display: flex;
   gap: 10px;
+  align-items: stretch;
 }
 
 .readsmart-qa-input {
@@ -577,6 +584,7 @@
   background: white !important;
   color: #333 !important;
   transition: all 0.2s;
+  height: auto;
 }
 
 .readsmart-qa-input:focus {
@@ -587,6 +595,34 @@
 
 .readsmart-qa-input::placeholder {
   color: #999 !important;
+}
+
+/* Q&A Send Button - specific styling to match input height */
+#readsmart-qa-send {
+  flex-shrink: 0;
+  padding: 12px 20px !important;
+  height: auto !important;
+  min-height: 44px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+#readsmart-qa-send span {
+  color: white !important;
+}
+
+#readsmart-qa-send:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
 }
 
 /* Scrollbar Styling */

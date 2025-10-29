@@ -2,13 +2,15 @@
 // Intelligently detects articles and provides AI-powered reading assistance
 
 // Safety check: ensure config is loaded from config.js
-if (!window.READSMART_CONTENT_LIMITS || !window.READSMART_TIMEOUTS || !window.READSMART_DETECTION) {
+if (!window.READSMART_CONTENT_LIMITS || !window.READSMART_TIMEOUTS || !window.READSMART_DETECTION || !window.READSMART_DEBUG) {
   console.error('[ReadSmart] Configuration not loaded! Ensure config.js loads before readsmart.js in manifest.json');
   throw new Error('ReadSmart configuration not loaded');
 }
 
-console.log('[ReadSmart] Content script loaded');
-console.log('[ReadSmart] Config loaded successfully');
+if (window.READSMART_DEBUG?.enabled) {
+  console.log('[ReadSmart] Content script loaded');
+  console.log('[ReadSmart] Config loaded successfully');
+}
 
 let isArticlePage = false;
 let articleContent = null;
@@ -44,18 +46,24 @@ function init() {
     }
 
     detectionAttempts++;
-    console.log(`[ReadSmart] Retry detection attempt ${detectionAttempts}/${window.READSMART_DETECTION.maxRetries}`);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log(`[ReadSmart] Retry detection attempt ${detectionAttempts}/${window.READSMART_DETECTION.maxRetries}`);
+    }
     detectArticle();
 
     if (detectionAttempts >= window.READSMART_DETECTION.maxRetries) {
       clearInterval(retryIntervalId);
       retryIntervalId = null;
-      console.log('[ReadSmart] Max detection attempts reached, stopping retry');
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart] Max detection attempts reached, stopping retry');
+      }
       // Disconnect mutation observer to prevent memory leak
       if (mutationObserver) {
         mutationObserver.disconnect();
         mutationObserver = null;
-        console.log('[ReadSmart] Disconnected mutation observer after max retries');
+        if (window.READSMART_DEBUG?.enabled) {
+          console.log('[ReadSmart] Disconnected mutation observer after max retries');
+        }
       }
     }
   }, window.READSMART_DETECTION.retryInterval);
@@ -85,7 +93,9 @@ function setupMutationObserver() {
   if (!document.body) {
     bodyCheckAttempts++;
     if (bodyCheckAttempts < MAX_BODY_CHECK_ATTEMPTS) {
-      console.log(`[ReadSmart] Body not ready, waiting... (attempt ${bodyCheckAttempts}/${MAX_BODY_CHECK_ATTEMPTS})`);
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log(`[ReadSmart] Body not ready, waiting... (attempt ${bodyCheckAttempts}/${MAX_BODY_CHECK_ATTEMPTS})`);
+      }
       setTimeout(setupMutationObserver, 100);
     } else {
       console.error('[ReadSmart] Body never loaded after 50 attempts (5 seconds)');
@@ -111,12 +121,16 @@ function setupMutationObserver() {
       subtree: true
     });
 
-    console.log('[ReadSmart] Mutation observer set up successfully');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Mutation observer set up successfully');
+    }
 
     // Safety timeout: disconnect observer to prevent memory leak
     setTimeout(() => {
       if (mutationObserver && !isArticlePage) {
-        console.log('[ReadSmart] Safety timeout reached, disconnecting mutation observer');
+        if (window.READSMART_DEBUG?.enabled) {
+          console.log('[ReadSmart] Safety timeout reached, disconnecting mutation observer');
+        }
         mutationObserver.disconnect();
         mutationObserver = null;
       }
@@ -146,10 +160,12 @@ function detectArticle() {
     const content = extractArticleContent();
 
     if (!content || content.text.length < window.READSMART_CONTENT_LIMITS.MIN_ARTICLE) {
-      console.log('[ReadSmart] Page does not appear to be an article (too short or no content)');
-      console.log('[ReadSmart] Content length:', content ? content.text.length : 0, 'characters (min:', window.READSMART_CONTENT_LIMITS.MIN_ARTICLE, ')');
-      if (content && content.text.length > 0 && content.text.length < window.READSMART_CONTENT_LIMITS.MIN_ARTICLE) {
-        console.log('[ReadSmart] First 200 chars of extracted content:', content.text.substring(0, 200));
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart] Page does not appear to be an article (too short or no content)');
+        console.log('[ReadSmart] Content length:', content ? content.text.length : 0, 'characters (min:', window.READSMART_CONTENT_LIMITS.MIN_ARTICLE, ')');
+        if (content && content.text.length > 0 && content.text.length < window.READSMART_CONTENT_LIMITS.MIN_ARTICLE) {
+          console.log('[ReadSmart] First 200 chars of extracted content:', content.text.substring(0, 200));
+        }
       }
       return;
     }
@@ -157,17 +173,21 @@ function detectArticle() {
     isArticlePage = true;
     articleContent = content;
 
-    console.log('[ReadSmart] ✅ Article detected!');
-    console.log('[ReadSmart] Domain:', content.domain);
-    console.log('[ReadSmart] Title:', content.title);
-    console.log('[ReadSmart] Length:', content.text.length, 'characters');
-    console.log('[ReadSmart] Words:', content.wordCount);
-    console.log('[ReadSmart] Estimated reading time:', content.readingTime, 'minutes');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] ✅ Article detected!');
+      console.log('[ReadSmart] Domain:', content.domain);
+      console.log('[ReadSmart] Title:', content.title);
+      console.log('[ReadSmart] Length:', content.text.length, 'characters');
+      console.log('[ReadSmart] Words:', content.wordCount);
+      console.log('[ReadSmart] Estimated reading time:', content.readingTime, 'minutes');
+    }
 
     // Stop mutation observer once article is found
     if (mutationObserver) {
       mutationObserver.disconnect();
-      console.log('[ReadSmart] Stopped mutation observer');
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart] Stopped mutation observer');
+      }
     }
 
     // Show ReadSmart button
@@ -276,7 +296,9 @@ function extractArticleContent() {
   for (const [platform, selectors] of Object.entries(platformSelectors)) {
     if (domain.includes(platform)) {
       articleSelectors = [...selectors];
-      console.log('[ReadSmart] Detected platform:', platform);
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart] Detected platform:', platform);
+      }
       break;
     }
   }
@@ -303,14 +325,18 @@ function extractArticleContent() {
     const element = document.querySelector(selector);
     if (element) {
       mainElement = element;
-      console.log('[ReadSmart] Found content using selector:', selector);
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart] Found content using selector:', selector);
+      }
       break;
     }
   }
 
   // Fallback to body if no article element found
   if (!mainElement) {
-    console.log('[ReadSmart] No article element found, using body');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] No article element found, using body');
+    }
     mainElement = document.body;
   }
 
@@ -321,8 +347,8 @@ function extractArticleContent() {
 
   // Extract title
   const title = document.title ||
-                document.querySelector('h1')?.innerText ||
-                'Untitled Article';
+    document.querySelector('h1')?.innerText ||
+    'Untitled Article';
 
   // Extract metadata
   const url = window.location.href;
@@ -634,7 +660,9 @@ async function generateSummary() {
     const length = document.getElementById('readsmart-summary-length')?.value || 'medium';
     const type = document.getElementById('readsmart-summary-type')?.value || 'key-points';
 
-    console.log('[ReadSmart] Generating summary...', { length, type });
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Generating summary...', { length, type });
+    }
 
     // Request summary from background script
     const response = await chrome.runtime.sendMessage({
@@ -644,11 +672,15 @@ async function generateSummary() {
       length: length
     });
 
-    console.log('[ReadSmart] Summary response:', response);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Summary response:', response);
+    }
 
     if (response && response.success) {
-      console.log('[ReadSmart] Summary received, length:', response.summary?.length);
-      console.log('[ReadSmart] Summary preview:', response.summary?.substring(0, 200));
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart] Summary received, length:', response.summary?.length);
+        console.log('[ReadSmart] Summary preview:', response.summary?.substring(0, 200));
+      }
 
       currentSummary = response.summary;
       displaySummary(response.summary, type);
@@ -759,10 +791,12 @@ function showSummaryError(message) {
 
 // Regenerate summary
 function regenerateSummary() {
-  console.log('[ReadSmart] Regenerating summary with new settings...');
-  const length = document.getElementById('readsmart-summary-length')?.value;
-  const type = document.getElementById('readsmart-summary-type')?.value;
-  console.log('[ReadSmart] New settings:', { length, type });
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Regenerating summary with new settings...');
+    const length = document.getElementById('readsmart-summary-length')?.value;
+    const type = document.getElementById('readsmart-summary-type')?.value;
+    console.log('[ReadSmart] New settings:', { length, type });
+  }
   generateSummary();
 }
 
@@ -780,7 +814,9 @@ async function generateSuggestedQuestions() {
       </div>
     `;
 
-    console.log('[ReadSmart] Generating suggested questions...');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Generating suggested questions...');
+    }
 
     // Request AI to generate questions with timeout
     const timeoutPromise = new Promise((_, reject) => {
@@ -795,7 +831,9 @@ async function generateSuggestedQuestions() {
 
     const response = await Promise.race([responsePromise, timeoutPromise]);
 
-    console.log('[ReadSmart] Questions response:', response);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Questions response:', response);
+    }
 
     if (response && response.success && response.questions) {
       displaySuggestedQuestions(response.questions);
@@ -839,23 +877,31 @@ async function generateSuggestedQuestions() {
 function displaySuggestedQuestions(questions) {
   const questionsContainer = document.getElementById('readsmart-suggested-questions');
   if (!questionsContainer) {
-    console.warn('[ReadSmart] Questions container not found');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.warn('[ReadSmart] Questions container not found');
+    }
     return;
   }
 
-  console.log('[ReadSmart] Displaying', questions.length, 'suggested questions');
-  console.log('[ReadSmart] Questions array:', questions);
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Displaying', questions.length, 'suggested questions');
+    console.log('[ReadSmart] Questions array:', questions);
+  }
 
   // Filter out empty or invalid questions
   const validQuestions = questions.filter(q => q && typeof q === 'string' && q.trim().length > 0);
 
   if (validQuestions.length === 0) {
-    console.warn('[ReadSmart] No valid questions to display');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.warn('[ReadSmart] No valid questions to display');
+    }
     questionsContainer.innerHTML = '';
     return;
   }
 
-  console.log('[ReadSmart] Valid questions:', validQuestions);
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Valid questions:', validQuestions);
+  }
 
   let html = '<div class="readsmart-questions-label">💡 Suggested questions:</div>';
   html += '<div class="readsmart-questions-chips">';
@@ -870,16 +916,22 @@ function displaySuggestedQuestions(questions) {
 
   html += '</div>';
 
-  console.log('[ReadSmart] Setting questions HTML, length:', html.length);
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Setting questions HTML, length:', html.length);
+  }
   questionsContainer.innerHTML = html;
 
-  console.log('[ReadSmart] Questions container HTML after setting:', questionsContainer.innerHTML.substring(0, 200));
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Questions container HTML after setting:', questionsContainer.innerHTML.substring(0, 200));
+  }
 
   // Add click handlers
   questionsContainer.querySelectorAll('.readsmart-question-chip').forEach((chip, index) => {
     chip.addEventListener('click', () => {
       const question = chip.getAttribute('data-question');
-      console.log('[ReadSmart] Suggested question clicked:', question);
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart] Suggested question clicked:', question);
+      }
       const input = document.getElementById('readsmart-qa-input');
       if (input) {
         input.value = question;
@@ -890,7 +942,9 @@ function displaySuggestedQuestions(questions) {
     });
   });
 
-  console.log('[ReadSmart] Suggested questions displayed and click handlers attached');
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Suggested questions displayed and click handlers attached');
+  }
 }
 
 // Get default template questions
@@ -921,7 +975,9 @@ async function sendQuestion() {
   const thinkingId = addQAMessage('assistant', '...', true);
 
   try {
-    console.log('[ReadSmart] Asking question:', question);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Asking question:', question);
+    }
 
     // Request answer from background script with timeout
     const timeoutPromise = new Promise((_, reject) => {
@@ -940,7 +996,9 @@ async function sendQuestion() {
 
     const response = await Promise.race([responsePromise, timeoutPromise]);
 
-    console.log('[ReadSmart] Answer response:', response);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Answer response:', response);
+    }
 
     // Remove thinking indicator
     removeQAMessage(thinkingId);
@@ -1017,20 +1075,28 @@ function addQAMessage(role, text, isThinking = false) {
   messagesContainer.appendChild(messageDiv);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-  console.log('[ReadSmart] Added message:', messageId, 'role:', role, 'isThinking:', isThinking);
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Added message:', messageId, 'role:', role, 'isThinking:', isThinking);
+  }
 
   return messageId;
 }
 
 // Remove Q&A message
 function removeQAMessage(messageId) {
-  console.log('[ReadSmart] Removing message:', messageId);
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] Removing message:', messageId);
+  }
   const message = document.getElementById(messageId);
   if (message) {
-    console.log('[ReadSmart] Message found and removed');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Message found and removed');
+    }
     message.remove();
   } else {
-    console.warn('[ReadSmart] Message not found:', messageId);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.warn('[ReadSmart] Message not found:', messageId);
+    }
   }
 }
 
@@ -1040,16 +1106,20 @@ function detectSourceLanguage() {
   const htmlLang = document.documentElement.lang;
   if (htmlLang && htmlLang.length >= 2) {
     const langCode = htmlLang.substring(0, 2).toLowerCase();
-    console.log('[ReadSmart] Detected language from HTML:', langCode);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Detected language from HTML:', langCode);
+    }
     return langCode;
   }
 
   // Try to get from meta tags
   const metaLang = document.querySelector('meta[http-equiv="content-language"]')?.content ||
-                   document.querySelector('meta[name="language"]')?.content;
+    document.querySelector('meta[name="language"]')?.content;
   if (metaLang && metaLang.length >= 2) {
     const langCode = metaLang.substring(0, 2).toLowerCase();
-    console.log('[ReadSmart] Detected language from meta:', langCode);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Detected language from meta:', langCode);
+    }
     return langCode;
   }
 
@@ -1057,12 +1127,16 @@ function detectSourceLanguage() {
   const browserLang = navigator.language || navigator.userLanguage;
   if (browserLang && browserLang.length >= 2) {
     const langCode = browserLang.substring(0, 2).toLowerCase();
-    console.log('[ReadSmart] Using browser language:', langCode);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Using browser language:', langCode);
+    }
     return langCode;
   }
 
   // Default to English
-  console.log('[ReadSmart] No language detected, defaulting to English');
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart] No language detected, defaulting to English');
+  }
   return 'en';
 }
 
@@ -1099,7 +1173,9 @@ async function translateArticle() {
       </div>
     `;
 
-    console.log('[ReadSmart] Translating from', sourceLang, 'to:', targetLang);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Translating from', sourceLang, 'to:', targetLang);
+    }
 
     // Request translation from background script with detected source language
     const response = await chrome.runtime.sendMessage({
@@ -1109,7 +1185,9 @@ async function translateArticle() {
       sourceLanguage: sourceLang
     });
 
-    console.log('[ReadSmart] Translation response:', response);
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart] Translation response:', response);
+    }
 
     if (response && response.success) {
       translationText.innerHTML = `
@@ -1260,4 +1338,6 @@ if (document.readyState === 'loading') {
 window.addEventListener('beforeunload', cleanup);
 window.addEventListener('pagehide', cleanup);
 
-console.log('[ReadSmart] Content script initialized');
+if (window.READSMART_DEBUG?.enabled) {
+  console.log('[ReadSmart] Content script initialized');
+}

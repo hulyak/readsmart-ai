@@ -158,7 +158,7 @@ const translator = await Translator.create({
   targetLanguage: 'es',
   monitor(m) {
     m.addEventListener('downloadprogress', (e) => {
-      console.log(`Translation model download: ${Math.round(e.loaded * 100)}%`);
+      if (DEBUG.logInfo) console.log(`Translation model download: ${Math.round(e.loaded * 100)}%`);
     });
   }
 });

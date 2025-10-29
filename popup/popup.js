@@ -7,7 +7,9 @@ let progressPollInterval = null;
 
 // Initialize popup
 async function init() {
-  console.log('[ReadSmart Popup] Initializing...');
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart Popup] Initializing...');
+  }
 
   // Restore previous state from storage
   await restoreState();
@@ -33,10 +35,14 @@ async function checkBatchProgress() {
     const progress = response.progress;
 
     if (progress.status === 'running') {
-      console.log('[ReadSmart Popup] Resuming batch progress display');
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart Popup] Resuming batch progress display');
+      }
       startProgressPolling();
     } else if (progress.status === 'completed') {
-      console.log('[ReadSmart Popup] Batch completed, loading results');
+      if (window.READSMART_DEBUG?.enabled) {
+        console.log('[ReadSmart Popup] Batch completed, loading results');
+      }
       summaryResults = progress.results;
     }
   }
@@ -68,9 +74,13 @@ async function restoreState() {
       if (ageMinutes < 30) {
         selectedTabs = popupState.selectedTabs || [];
         summaryResults = popupState.summaryResults || [];
-        console.log('[ReadSmart Popup] Restored state:', selectedTabs.length, 'selected tabs,', summaryResults.length, 'results');
+        if (window.READSMART_DEBUG?.enabled) {
+          console.log('[ReadSmart Popup] Restored state:', selectedTabs.length, 'selected tabs,', summaryResults.length, 'results');
+        }
       } else {
-        console.log('[ReadSmart Popup] State too old, starting fresh');
+        if (window.READSMART_DEBUG?.enabled) {
+          console.log('[ReadSmart Popup] State too old, starting fresh');
+        }
       }
     }
   } catch (error) {
@@ -91,7 +101,9 @@ async function loadTabs() {
       !tab.url.startsWith('chrome-extension://')
     );
 
-    console.log('[ReadSmart Popup] Loaded', allTabs.length, 'tabs');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart Popup] Loaded', allTabs.length, 'tabs');
+    }
 
     displayTabs();
 
@@ -243,7 +255,9 @@ function updateSummarizeButton() {
 async function summarizeSelected() {
   if (selectedTabs.length === 0) return;
 
-  console.log('[ReadSmart Popup] Starting batch summary for', selectedTabs.length, 'tabs');
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart Popup] Starting batch summary for', selectedTabs.length, 'tabs');
+  }
 
   // Clear previous results
   summaryResults = [];
@@ -255,7 +269,9 @@ async function summarizeSelected() {
   });
 
   if (response.success) {
-    console.log('[ReadSmart Popup] Batch summary started in background');
+    if (window.READSMART_DEBUG?.enabled) {
+      console.log('[ReadSmart Popup] Batch summary started in background');
+    }
     startProgressPolling();
   } else {
     showError('Failed to start batch summary');
@@ -288,7 +304,9 @@ function startProgressPolling() {
 
       // Check if completed
       if (progress.status === 'completed') {
-        console.log('[ReadSmart Popup] Batch summary completed!');
+        if (window.READSMART_DEBUG?.enabled) {
+          console.log('[ReadSmart Popup] Batch summary completed!');
+        }
         clearInterval(progressPollInterval);
         progressPollInterval = null;
 
@@ -522,7 +540,9 @@ function exportResults(format) {
   a.click();
   URL.revokeObjectURL(url);
 
-  console.log('[ReadSmart Popup] Exported as', format);
+  if (window.READSMART_DEBUG?.enabled) {
+    console.log('[ReadSmart Popup] Exported as', format);
+  }
 }
 
 // Clear results

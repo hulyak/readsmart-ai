@@ -126,8 +126,7 @@ If you're getting the error **"I'm unable to process this question right now"**,
 1. **Check Console**: Open DevTools (F12) → Console tab
 2. **Look for errors**: Search for `[ReadSmart]` messages
 3. **Check flags again**: Sometimes flags reset after updates
-4. **Try Chrome Canary**: More stable AI API support
-5. **Open an issue**: Include console logs and Chrome version
+4. **Open an issue**: Include console logs and Chrome version
 
 ---
 

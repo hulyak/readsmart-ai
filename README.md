@@ -6,6 +6,45 @@
 [![Gemini Nano](https://img.shields.io/badge/Powered_by-Gemini_Nano-764ba2?style=for-the-badge)](https://deepmind.google/technologies/gemini/nano/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 
+## Installation & Setup
+
+### Prerequisites
+
+**IMPORTANT:** Chrome's built-in AI requires specific setup:
+
+1. **Chrome Dev** (Version 128+)
+   - [Download Chrome Dev](https://www.google.com/chrome/dev/)
+
+2. **Enable 4 Chrome Flags** at `chrome://flags`:
+   - `#optimization-guide-on-device-model` → Enabled BypassPerfRequirement
+   - `#prompt-api-for-gemini-nano` → Enabled
+   - `#summarization-api-for-gemini-nano` → Enabled
+   - `#translation-api` → Enabled
+
+3. **Restart Chrome** and wait for AI model download (5-15 minutes)
+
+4. **Verify** at `chrome://components` - "Optimization Guide On Device Model" shows "Registered"
+
+**🚨 Having Issues?** See **[SETUP_GUIDE.md](SETUP_GUIDE.md)** for detailed setup instructions and troubleshooting.
+
+### Installing the Extension
+
+1. **Clone this repository**
+   ```bash
+   git clone https://github.com/hulyak/readsmart-ai.git
+   cd readsmart-ai
+   ```
+
+2. **Open Chrome Extensions Page**
+   - Navigate to `chrome://extensions`
+   - Enable "Developer mode" (toggle in top right)
+
+3. **Load Extension**
+   - Click "Load unpacked"
+   - Select the `readsmart-ai` folder
+   - Extension should load successfully
+
+
 ## The Problem
 
 **Information overload is overwhelming modern readers:**
@@ -246,44 +285,6 @@ readsmart-ai/
 - Live progress display
 - Resume capability
 
-## Installation & Setup
-
-### Prerequisites
-
-**IMPORTANT:** Chrome's built-in AI requires specific setup:
-
-1. **Chrome Dev or Canary** (Version 128+)
-   - [Download Chrome Canary](https://www.google.com/chrome/canary/)
-   - [Download Chrome Dev](https://www.google.com/chrome/dev/)
-
-2. **Enable 4 Chrome Flags** at `chrome://flags`:
-   - `#optimization-guide-on-device-model` → Enabled BypassPerfRequirement
-   - `#prompt-api-for-gemini-nano` → Enabled
-   - `#summarization-api-for-gemini-nano` → Enabled
-   - `#translation-api` → Enabled
-
-3. **Restart Chrome** and wait for AI model download (5-15 minutes)
-
-4. **Verify** at `chrome://components` - "Optimization Guide On Device Model" shows "Registered"
-
-**🚨 Having Issues?** See **[SETUP_GUIDE.md](SETUP_GUIDE.md)** for detailed setup instructions and troubleshooting.
-
-### Installing the Extension
-
-1. **Clone this repository**
-   ```bash
-   git clone https://github.com/hulyak/readsmart-ai.git
-   cd readsmart-ai
-   ```
-
-2. **Open Chrome Extensions Page**
-   - Navigate to `chrome://extensions`
-   - Enable "Developer mode" (toggle in top right)
-
-3. **Load Extension**
-   - Click "Load unpacked"
-   - Select the `readsmart-ai` folder
-   - Extension should load successfully
 
 ## User Guide
 

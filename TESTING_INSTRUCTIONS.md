@@ -15,7 +15,7 @@ Complete testing guide for all features and functionality.
 
 Before testing, ensure your environment is properly set up:
 
-- **Chrome Dev or Canary** (Version 128+) with AI flags enabled
+- **Chrome Dev** (Version 128+) with AI flags enabled
 - **AI Model downloaded** - Check `chrome://components`
 - **Extension installed** - Loaded at `chrome://extensions`
 
